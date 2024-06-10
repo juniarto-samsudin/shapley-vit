@@ -24,6 +24,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 my_local_model_path = os.getenv("LOCAL_MODEL_PATH")
 my_global_model_path = os.getenv("GLOBAL_MODEL_PATH")
+my_validation_dataset = os.getenv("VALIDATION_DATASET")
+
+print('my_validation_dataset: ', my_validation_dataset)
 
 def getOCTData():
     root_dir = '/mnt/data/home/astar/FL_Platform_crypten/OCT/CellData/OCT1/train'
@@ -46,7 +49,7 @@ def getOCTData():
     return data_set
 
 def getOCTData2():
-    dataset = CellDataLoader(root_dir = '/mnt/data/home/astar/FL_Platform_crypten/OCT/CellData/OCT1/train',
+    dataset = CellDataLoader(root_dir = my_validation_dataset,
                               mode = 'train',
                               patch_size=256,
                               sub_dir='')
@@ -142,11 +145,11 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
             print('i: ', i)
             ckpt = th.load(filePath)
             #print_trainable_parameters(ckpt['state_dict'])
-            print(client_model)
+            #print(client_model)
            
             #print(ckpt['state_dict'])
             client_model.load_state_dict(ckpt['state_dict'])
-            print(client_model)
+            #print(client_model)
             
            
            
