@@ -882,9 +882,9 @@ def evaluation(args, net, eval_loader):
         labels = Variable(labels).long().to(device)
 
         #outputs = net(img).logits
-        print('before net')
+        #print('before net')
         outputs = net(img).logits
-        print('after net')
+        #print('after net')
          
             
          

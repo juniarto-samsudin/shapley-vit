@@ -22,7 +22,9 @@ from dotenv import load_dotenv
 load_dotenv()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-my_local_model_path = os.getenv("LOCAL_MODEL_PATH")
+my_local_model_path1 = os.getenv("LOCAL_MODEL_PATH1")
+my_local_model_path2 = os.getenv("LOCAL_MODEL_PATH2")
+my_local_model_path3 = os.getenv("LOCAL_MODEL_PATH3")
 my_global_model_path = os.getenv("GLOBAL_MODEL_PATH")
 my_validation_dataset = os.getenv("VALIDATION_DATASET")
 
@@ -121,6 +123,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
     """
 
     #client local training
+    
     local_acc_all, local_loss_all = [], []
     client_model_all_rounds = [None for i in range(num_clients)] # [None, None, None]
     client_model_selection_matrix = [False for i in range(num_clients)] # [False, False, False]
@@ -164,10 +167,10 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
             client_model_selection_matrix[i] = True
 
 
-        print('Local accuracy: ', local_acc_all)
-        print('Local loss: ', local_loss_all)
+        print('Local accuracy all: ', local_acc_all) #[0.21171171171171171, 0.21171171171171171, 0.21171171171171171]
+        print('Local loss all: ', local_loss_all) #[1.3890263806592236, 1.3890264081525372, 1.3890263944058805]
         #print('Client model all rounds: ', client_model_all_rounds) #very long to print out
-        print('Client model selection matrix: ', client_model_selection_matrix)
+        print('Client model selection matrix: ', client_model_selection_matrix) #[True, True, True]
 
         # create clients
         clients_all = [ClientBase(id, args, init_global_model, dataset)
@@ -187,11 +190,24 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
                     )
         logger = None
         shapley_value = call_shapley_computation_method(args,game, logger) 
+        print('Shapley value for first local training: ', shapley_value)
+        #[
+        # {0: 0.004504504504504499, 1: 0.004504504504504499, 2: 0.004504504504504499}, 
+        # {0: -0.009677513744478625, 1: -0.009677513859185029, 2: -0.009677506638718766}
+        #]
 
     
 
 
     
+    #Get Global Model
+    my_global_model = th.load("/mnt/data/home/juniarto/FromRenuga/global/ViT_epoch_50.pth.tar")
+    server.global_model.load_state_dict(my_global_model['state_dict'])
+    print('Global Model loaded!')
+
+    fed_valid_acc, fed_valid_loss = evaluation(args, server.global_model, valid_loader)
+    print('Global Accuracy: ', fed_valid_acc)
+    print('Global Loss: ', fed_valid_loss)
 
     return shapley_value_all_rounds, shapley_value_sum
 
@@ -270,7 +286,7 @@ def start():
     print_trainable_parameters(model)
     print("ViT Model")
     count_parameters(model)
-    print(model)
+    #print(model)
     from peft import LoraConfig, get_peft_model
     lora_config = LoraConfig(r=16,lora_alpha=8,target_modules=["query", "value"],lora_dropout=0.05,bias="none",modules_to_save=["classifier"],)
     lora_vit_model = get_peft_model(vit_model, lora_config)
@@ -278,8 +294,8 @@ def start():
     model=lora_vit_model
     print("ViT+LoRa")
     count_parameters(model)
-    print(model)
-    print_trainable_parameters(model)
+    #print(model)
+    #print_trainable_parameters(model)
     model = nn.DataParallel(model,device_ids = [0,1])
      
     init_global_model =model.to(device)

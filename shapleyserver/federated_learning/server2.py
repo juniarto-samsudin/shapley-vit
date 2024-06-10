@@ -14,7 +14,7 @@ from .. federated_learning.utils import (
 
 class ServerBase(object):
     def __init__(self, args, net_train, clients, test_set, valid_set=None, group_valid_dataset=None):
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # Set up the main attributes
         self.args = args
         #self.device = args.device        

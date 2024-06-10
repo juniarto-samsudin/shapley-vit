@@ -3,3 +3,4 @@ exp/*
 __pycache__
 shapleyserver/datasets/*
 shapleyserver/local_training/*
+mylog.log

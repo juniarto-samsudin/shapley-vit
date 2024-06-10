@@ -99,7 +99,7 @@ class Game():
                                         self.get_agg_ratio(selected_clients=[self.clients[j] for j in participating_indices]))
             )
 
-        print('per_round_aggregated_models: ', per_round_aggregated_models)
+        #print('per_round_aggregated_models: ', per_round_aggregated_models)
 
 
         # compute utility
