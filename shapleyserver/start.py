@@ -18,6 +18,8 @@ from . federated_learning.client2 import ClientBase
 from . federated_learning.server2 import ServerBase
 from transformers import ViTFeatureExtractor, ViTModel, ViTForImageClassification,ViTImageProcessor, AutoModel
 from dotenv import load_dotenv
+import re 
+
 
 load_dotenv()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -29,6 +31,15 @@ my_global_model_path = os.getenv("GLOBAL_MODEL_PATH")
 my_validation_dataset = os.getenv("VALIDATION_DATASET")
 
 print('my_validation_dataset: ', my_validation_dataset)
+
+import re
+
+def natural_keys(text):
+    """
+    A helper function that returns a list of either integers or text components from a string.
+    For example, 'ViT_epoch_10.pth.tar' -> ['ViT_epoch_', 10, '.pth.tar']
+    """
+    return [int(c) if c.isdigit() else c for c in re.split('([0-9]+)', text)]
 
 def getOCTData():
     root_dir = '/mnt/data/home/astar/FL_Platform_crypten/OCT/CellData/OCT1/train'
@@ -123,92 +134,152 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
     """
 
     #client local training
-    
-    local_acc_all, local_loss_all = [], []
-    client_model_all_rounds = [None for i in range(num_clients)] # [None, None, None]
-    client_model_selection_matrix = [False for i in range(num_clients)] # [False, False, False]
+    #monitoring client directories
+    client_processed_model1 = []
+    client_processed_model2 = []
+    client_processed_model3 = []
+    global_processed_model = [] 
+    #print('client_model_list1: ', client_model_list1)
+    #print('global_model_list: ', global_model_list)
+    acc_session_all = []
+    loss_session_all = []
+    shapley_session_all = []
 
-    current_directory = os.getcwd() #'/mnt/data/home/juniarto/shapleyserver'
-    '''
-    filePath_1 = os.path.join(current_directory, 'shapleyserver', 'local_training', 'client_1_model','inception_epoch_9.pth.tar')
-    filePath_2 = os.path.join(current_directory, 'shapleyserver', 'local_training', 'client_2_model','inception_epoch_9.pth.tar')
-    filePath_3 = os.path.join(current_directory, 'shapleyserver', 'local_training', 'client_3_model','inception_epoch_9.pth.tar')
-    '''
-    filePath_1 = os.path.join(current_directory, 'shapleyserver', 'local_training', 'client_1_model','ViT_epoch_9.pth.tar')
-    filePath_2 = os.path.join(current_directory, 'shapleyserver', 'local_training', 'client_2_model','ViT_epoch_9.pth.tar')
-    filePath_3 = os.path.join(current_directory, 'shapleyserver', 'local_training', 'client_3_model','ViT_epoch_9.pth.tar')
-    print('File path: ', filePath_1)
-    filePaths = [filePath_1, filePath_2, filePath_3]
-    client_models = [client_model_1, client_model_2, client_model_3]
+    # create clients
+    clients_all = [ClientBase(id, args, init_global_model, dataset)
+                            for id in range(num_clients)] 
 
-    if(checkLocalTrainingModelExist(filePath_1) and checkLocalTrainingModelExist(filePath_2) and checkLocalTrainingModelExist(filePath_3)):
-        print('All Local Training Model exists!')
-        #LOAD CLIENT MODEL HERE
-        for(i, (filePath, client_model)) in enumerate(zip(filePaths, client_models)):
-            print('i: ', i)
-            ckpt = th.load(filePath)
-            #print_trainable_parameters(ckpt['state_dict'])
-            #print(client_model)
-           
-            #print(ckpt['state_dict'])
-            client_model.load_state_dict(ckpt['state_dict'])
-            #print(client_model)
-            
-           
-           
-            print('Model loaded!')
-            accuracy, loss = evaluation(args, client_model, valid_loader) #server valid_loader
-            print('Accuracy: ', accuracy)
-            print('Loss: ', loss)
-            local_acc_all.append(accuracy)
-            local_loss_all.append(loss)
+    # create the server
+    server = ServerBase(args, init_global_model, clients_all,None, valid_loader, None)
+    break_all = False
+    while len(client_processed_model1) <= 1 and len(client_processed_model2) <= 1 and len(client_processed_model3) <= 1: #processing 50 first  models
+        client_model_list1 = [f for f in os.listdir(my_local_model_path1) if os.path.isfile(os.path.join(my_local_model_path1, f)) and f not in client_processed_model1]
+        client_model_list2 = [f for f in os.listdir(my_local_model_path2) if os.path.isfile(os.path.join(my_local_model_path2, f)) and f not in client_processed_model2]
+        client_model_list3 = [f for f in os.listdir(my_local_model_path3) if os.path.isfile(os.path.join(my_local_model_path3, f)) and f not in client_processed_model3]
+        global_model_list = [f for f in os.listdir(my_global_model_path) if os.path.isfile(os.path.join(my_global_model_path, f)) and f not in global_processed_model] 
 
-            client_model_all_rounds[i] = get_difference_between_network_weights(client_model, init_global_model)
-            client_model_selection_matrix[i] = True
+        print('client_model_list1: ', client_model_list1)
+        print('sorted client_model_list1: ', sorted(client_model_list1, key=natural_keys))
 
+        local_acc_all, local_loss_all = [], []
+        client_model_all_rounds = [None for i in range(num_clients)] # [None, None, None]
+        client_model_selection_matrix = [False for i in range(num_clients)] # [False, False, False]
 
-        print('Local accuracy all: ', local_acc_all) #[0.21171171171171171, 0.21171171171171171, 0.21171171171171171]
-        print('Local loss all: ', local_loss_all) #[1.3890263806592236, 1.3890264081525372, 1.3890263944058805]
-        #print('Client model all rounds: ', client_model_all_rounds) #very long to print out
-        print('Client model selection matrix: ', client_model_selection_matrix) #[True, True, True]
+        current_directory = os.getcwd() #'/mnt/data/home/juniarto/shapleyserver'
+       
+        #for model1, model2, model3 in zip (sorted(client_model_list1, key=natural_keys), sorted(client_model_list2, key=natural_keys), sorted(client_model_list3, key=natural_keys)):
+        for (j, (model1, model2, model3, global_avg_model)) in enumerate(zip (sorted(client_model_list1, key=natural_keys), 
+                                                                          sorted(client_model_list2, key=natural_keys), 
+                                                                          sorted(client_model_list3, key=natural_keys),
+                                                                          sorted(global_model_list, key=natural_keys)
+                                                                          )):
+            print("**********************************************************************************")
+            print("NEW EPOCH")
+            print("EPOCH NO: ", j)
+            if (j == 5): #Break after 5 epochs 
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print('BREAKING THE LOOP')
+                break_all = True
+                break
+            filePath_1 = os.path.join(my_local_model_path1, model1)
+            filePath_2 = os.path.join(my_local_model_path2, model2)
+            filePath_3 = os.path.join(my_local_model_path3, model3)
+            filePath_global = os.path.join(my_global_model_path, global_avg_model)  
+            print('File path: ', filePath_1)
+            filePaths = [filePath_1, filePath_2, filePath_3]
+            client_models = [client_model_1, client_model_2, client_model_3]
+            print("**********************************************************************************")
 
-        # create clients
-        clients_all = [ClientBase(id, args, init_global_model, dataset)
-                       for id in range(num_clients)] 
+            if(checkLocalTrainingModelExist(filePath_1) and checkLocalTrainingModelExist(filePath_2) and checkLocalTrainingModelExist(filePath_3)):
+                print('All Local Training Model exists!')
+                #LOAD CLIENT MODEL HERE
+                for(i, (filePath, client_model)) in enumerate(zip(filePaths, client_models)):
+                    print('i: ', i)
+                    ckpt = th.load(filePath)
+                    #print_trainable_parameters(ckpt['state_dict'])
+                    #print(client_model)
+                
+                    #print(ckpt['state_dict'])
+                    client_model.load_state_dict(ckpt['state_dict'])
+                    #print(client_model)
+                    
+                
+                
+                    print('Model loaded!')
+                    accuracy, loss = evaluation(args, client_model, valid_loader) #server valid_loader
+                    print('Accuracy: ', accuracy)
+                    print('Loss: ', loss)
+                    local_acc_all.append(accuracy)
+                    local_loss_all.append(loss)
 
-        # create the server
-        server = ServerBase(args, init_global_model, clients_all,None, valid_loader, None)
+                    client_model_all_rounds[i] = get_difference_between_network_weights(client_model, init_global_model)
+                    client_model_selection_matrix[i] = True
+
+                print("=====================================================================================================")
+                print("Finish All Client Local Training")
+                print('Local accuracy all: ', local_acc_all) #[0.21171171171171171, 0.21171171171171171, 0.21171171171171171]
+                print('Local loss all: ', local_loss_all) #[1.3890263806592236, 1.3890264081525372, 1.3890263944058805]
+                #print('Client model all rounds: ', client_model_all_rounds) #very long to print out
+                print('Client model selection matrix: ', client_model_selection_matrix) #[True, True, True]
+
+                acc_session_all.append(local_acc_all)
+                loss_session_all.append(local_loss_all)
+                local_acc_all, local_loss_all = [], []
+                print('Acc session all: ', acc_session_all)
+                print('Loss session all: ', loss_session_all)
+                print("=====================================================================================================")
+
+                """ 
+                # create clients
+                clients_all = [ClientBase(id, args, init_global_model, dataset)
+                            for id in range(num_clients)] 
+
+                # create the server
+                server = ServerBase(args, init_global_model, clients_all,None, valid_loader, None) 
+                """
+                
+                game = Game(clients_all, 
+                            server, 
+                            init_global_model, 
+                            client_model_all_rounds, 
+                            client_model_selection_matrix,
+                            previous_utility,
+                            utility_dim, 
+                            args
+                            )
+                logger = None
+                shapley_value = call_shapley_computation_method(args,game, logger) 
+                print('Shapley value for first local training: ', shapley_value)
+                #[
+                # {0: 0.004504504504504499, 1: 0.004504504504504499, 2: 0.004504504504504499}, 
+                # {0: -0.009677513744478625, 1: -0.009677513859185029, 2: -0.009677506638718766}
+                #]
+                shapley_session_all.append(shapley_value)
+                print('Shapley session all: ', shapley_session_all)
+                client_processed_model1.append(model1)
+                client_processed_model2.append(model2)
+                client_processed_model3.append(model3)
         
-        game = Game(clients_all, 
-                    server, 
-                    init_global_model, 
-                    client_model_all_rounds, 
-                    client_model_selection_matrix,
-                    previous_utility,
-                    utility_dim, 
-                    args
-                    )
-        logger = None
-        shapley_value = call_shapley_computation_method(args,game, logger) 
-        print('Shapley value for first local training: ', shapley_value)
-        #[
-        # {0: 0.004504504504504499, 1: 0.004504504504504499, 2: 0.004504504504504499}, 
-        # {0: -0.009677513744478625, 1: -0.009677513859185029, 2: -0.009677506638718766}
-        #]
 
-    
+
+
+        
 
 
     
-    #Get Global Model
-    my_global_model = th.load("/mnt/data/home/juniarto/FromRenuga/global/ViT_epoch_50.pth.tar")
-    server.global_model.load_state_dict(my_global_model['state_dict'])
-    print('Global Model loaded!')
+            #Get Global Model
+            #my_global_model = th.load("/mnt/data/home/juniarto/FromRenuga/global/ViT_epoch_50.pth.tar")
+            my_global_model = th.load(filePath_global)
+            server.global_model.load_state_dict(my_global_model['state_dict'])
+            print('Global Model loaded!')
 
-    fed_valid_acc, fed_valid_loss = evaluation(args, server.global_model, valid_loader)
-    print('Global Accuracy: ', fed_valid_acc)
-    print('Global Loss: ', fed_valid_loss)
-
+            fed_valid_acc, fed_valid_loss = evaluation(args, server.global_model, valid_loader)
+            print('Global Accuracy: ', fed_valid_acc)
+            print('Global Loss: ', fed_valid_loss)
+            previous_utility[0] = fed_valid_acc
+            previous_utility[1] = fed_valid_loss 
+        if break_all:
+            break
     return shapley_value_all_rounds, shapley_value_sum
 
 def checkLocalTrainingModelExist(filepath):
