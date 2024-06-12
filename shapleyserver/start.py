@@ -18,7 +18,8 @@ from . federated_learning.client2 import ClientBase
 from . federated_learning.server2 import ServerBase
 from transformers import ViTFeatureExtractor, ViTModel, ViTForImageClassification,ViTImageProcessor, AutoModel
 from dotenv import load_dotenv
-import re 
+import re
+import pandas as pd 
 
 
 load_dotenv()
@@ -254,6 +255,11 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
                 # {0: 0.004504504504504499, 1: 0.004504504504504499, 2: 0.004504504504504499}, 
                 # {0: -0.009677513744478625, 1: -0.009677513859185029, 2: -0.009677506638718766}
                 #]
+                for i in range(utility_dim):
+                    shapley_value_all_rounds[i].append(shapley_value[i])
+                    shapley_value_sum[i] = {k: shapley_value_sum[i][k] + shapley_value[i][k] for k in shapley_value_sum[i].keys()}
+                print('Shapley value all rounds: ', shapley_value_all_rounds)
+                print('Shapley value sum: ', shapley_value_sum)
                 shapley_session_all.append(shapley_value)
                 print('Shapley session all: ', shapley_session_all)
                 client_processed_model1.append(model1)
@@ -279,6 +285,13 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
             previous_utility[0] = fed_valid_acc
             previous_utility[1] = fed_valid_loss 
         if break_all:
+            for key in utility_map:
+                shapley_df = pd.DataFrame(shapley_value_all_rounds[key])
+                shapley_df['shapley_value_sum'] = shapley_df[list(shapley_value_all_rounds[key][0].keys())].sum(axis=1)
+                shapley_df = shapley_df.cumsum(axis=0)
+                print('Shapley df: ', shapley_df)
+
+
             break
     return shapley_value_all_rounds, shapley_value_sum
 
