@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  shapleyapp:
+    build: .
+    image: shapleyapp
+    shm_size: 2gb
+    volumes:
+      - ./logs:/app/logs
+      - /mnt/data/home/juniarto/FromRenuga/local:/app/local1
+      - /mnt/data/home/juniarto/FromRenuga/local:/app/local2
+      - /mnt/data/home/juniarto/FromRenuga/local:/app/local3
+      - /mnt/data/home/juniarto/FromRenuga/global:/app/global
+      - /mnt/data/home/astar/FL_Platform_crypten/OCT/CellData/OCT1/train:/app/valdataset
+    environment:
+      - LOCAL_MODEL_PATH1=/app/local1
+      - LOCAL_MODEL_PATH2=/app/local2
+      - LOCAL_MODEL_PATH3=/app/local3
+      - GLOBAL_MODEL_PATH=/app/global
+      - VALIDATION_DATASET=/app/valdataset
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]

@@ -1,5 +1,6 @@
 from .. federated_learning.utils import evaluation, get_aggregated_model
 import copy
+import logging
 
 class Game():
     # a shapley game with n players
@@ -90,7 +91,7 @@ class Game():
         
         participating_indices = [
             j for j in coalition if self.client_selection_vector[j]]
-        print("Participating indices: {} ".format(participating_indices)) #[2]
+        logging.info("Participating indices: {} ".format(participating_indices)) #[2]
         
         if (len(participating_indices) > 0):
             per_round_aggregated_models.append(

@@ -5,6 +5,7 @@ import random
 import time
 from itertools import chain, combinations
 import operator as op
+import logging
 
 
 
@@ -16,7 +17,8 @@ def call_shapley_computation_method(args, game, logger):
     m = 50 * game.n
     shapley_value = shapley_comp_contrib(game, m)
     #logger.info(f"Comp contrib: {shapley_value}")
-    print(f"Comp contrib: {shapley_value}")
+    #print(f"Comp contrib: {shapley_value}")
+    logging.info("Comp contrib: {}".format(shapley_value))
 
     # if(args.approximation_method == 'monte_carlo'):
     #     m = 100
@@ -47,7 +49,8 @@ def call_shapley_computation_method(args, game, logger):
     else:
         raise ValueError("Unknown Shapley value approximation method") """
     
-    print(f"Shapley value sum for each utility: {[sum(list(shapley_value[i].values())) for i in range(2)]}")
+    #print(f"Shapley value sum for each utility: {[sum(list(shapley_value[i].values())) for i in range(2)]}")
+    logging.info("Shapley value sum for each utility: {}".format([sum(list(shapley_value[i].values())) for i in range(2)]))
     return shapley_value
 
 

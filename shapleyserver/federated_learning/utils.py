@@ -873,10 +873,10 @@ def evaluation(args, net, eval_loader):
     criterion = nn.CrossEntropyLoss(reduction='sum').to(device)
     correct, loss = 0, 0.0
     n_test_samples = len(eval_loader.dataset)
-    print('n_test_samples:', n_test_samples)
+    logging.info('n_test_samples: {}'.format(n_test_samples))
 
     for sample in eval_loader:
-        print('evaluating now')
+        logging.info('evaluating now')
         img, labels, image_name = sample['image'], sample['label'], sample['image_name']
         img = Variable(img).to(device)
         labels = Variable(labels).long().to(device)
@@ -894,7 +894,7 @@ def evaluation(args, net, eval_loader):
         loss += criterion(outputs, labels).item()
        
 
-    print('After evaluation')    
+    logging.info('After evaluation')    
 
     """ with torch.no_grad():
         for img in eval_loader:

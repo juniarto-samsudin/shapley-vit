@@ -4,3 +4,5 @@ __pycache__
 shapleyserver/datasets/*
 shapleyserver/local_training/*
 mylog.log
+/logs/*
+!/logs/.gitkeep

@@ -1,0 +1,5 @@
+exp/
+logs/
+.env
+.gitignore
+pip3install.txt
