@@ -24,6 +24,7 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
     && pip3 install prettytable \
     && pip3 install transformers==4.41.2 \
     && pip3 install python-dotenv==1.0.1 \
-    && pip3 install peft==0.11.1   
+    && pip3 install peft==0.11.1 \
+    && pip3 install redis==5.0.6   
 
 CMD ["python", "mainShapley.py"]

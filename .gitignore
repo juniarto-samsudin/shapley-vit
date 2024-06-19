@@ -6,3 +6,6 @@ shapleyserver/local_training/*
 mylog.log
 /logs/*
 !/logs/.gitkeep
+/logs/container-logs/*
+!/logs/container-logs/.gitkeep
+!/logs/container-logs/

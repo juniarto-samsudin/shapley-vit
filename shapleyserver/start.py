@@ -20,11 +20,36 @@ from transformers import ViTFeatureExtractor, ViTModel, ViTForImageClassificatio
 from dotenv import load_dotenv
 import re
 import pandas as pd
-import logging 
+import logging
+import redis
+import numpy as np
+import json
+import sys 
 
-logging.basicConfig(filename='./logs/app.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', 
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
 load_dotenv()
+session_id = os.getenv("SESSION_ID")
+party_id0 = os.getenv("PARTY_ID0")
+party_id1 = os.getenv("PARTY_ID1")
+party_id2 = os.getenv("PARTY_ID2")
+myUserMap = {0: party_id0, 
+             1: party_id1, 
+             2: party_id2
+            }
+log_name = 'container-{}.log'.format(session_id)
+logging.basicConfig(filename=("./logs/container-logs/{}".format(log_name)), 
+                    level=logging.DEBUG, 
+                    format='%(asctime)s %(levelname)s %(message)s', 
+                    datefmt='%m/%d/%Y %I:%M:%S %p')
+
+#Get Redis Host from environment variable in docker-compose
+#If not found, use localhost for development
+redis_host = os.getenv('REDIS_HOST', 'localhost')
+redis_port = os.getenv('REDIS_PORT', 6379)
+logging.info('Redis Host: {}'.format(redis_host))
+logging.info('Session ID: {}'.format(session_id))
+r = redis.Redis(host=redis_host, port=redis_port, db=0, decode_responses=True)
+
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 my_local_model_path1 = os.getenv("LOCAL_MODEL_PATH1")
@@ -180,11 +205,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
             logging.info("**********************************************************************************")
             logging.info("NEW EPOCH")
             logging.info("EPOCH NO: {}".format(j))
-            if (j == 3): #Break after 5 epochs 
-                logging.info('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
-                logging.info('BREAKING THE LOOP')
-                break_all = True
-                break
+           
             filePath_1 = os.path.join(my_local_model_path1, model1)
             filePath_2 = os.path.join(my_local_model_path2, model2)
             filePath_3 = os.path.join(my_local_model_path3, model3)
@@ -263,6 +284,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
                     shapley_value_sum[i] = {k: shapley_value_sum[i][k] + shapley_value[i][k] for k in shapley_value_sum[i].keys()}
                 logging.info('Shapley value all rounds: {}'.format(shapley_value_all_rounds))
                 logging.info('Shapley value sum: {}'.format(shapley_value_sum))
+                updateShapleyDb(shapley_value_all_rounds, session_id, j)
                 shapley_session_all.append(shapley_value)
                 logging.info('Shapley session all: {}'.format(shapley_session_all))
                 client_processed_model1.append(model1)
@@ -286,7 +308,13 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
             logging.info('Global Accuracy: {}'.format(fed_valid_acc))
             logging.info('Global Loss: {}'.format(fed_valid_loss))
             previous_utility[0] = fed_valid_acc
-            previous_utility[1] = fed_valid_loss 
+            previous_utility[1] = fed_valid_loss
+
+            if (j == 3): #Break after 5 epochs 
+                logging.info('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                logging.info('BREAKING THE LOOP')
+                break_all = True
+                break 
         if break_all:
             for key in utility_map:
                 shapley_df = pd.DataFrame(shapley_value_all_rounds[key])
@@ -323,7 +351,66 @@ def checkLocalTrainingModelExist(filepath):
 
     if(wait_for_file(filepath)):
         return True
+
+def updateShapleyDb(data, session_id, epoch, r=r):
+    #Update Shapley value to Redis
+    # Calculate cumulative sum of accuracy and loss for each user
+    cumsum_results = {}
+    for user_id in data[0][0].keys():  # assuming all dicts have the same user keys
+        cumsum_results[user_id] = {
+            'accuracy_cumsum': np.cumsum([epoch[user_id] for epoch in data[0]]),
+            'loss_cumsum': np.cumsum([epoch[user_id] for epoch in data[1]])
+        }
+    logging.info('Cumsum results: {}'.format(cumsum_results))
+    '''
+        {
+         0: {'accuracy_cumsum': array([0.05945946, 0.27117117, 0.26666667, 0.26216216]), 
+            'loss_cumsum': array([0.47168497, 0.15337227, 0.17599531, 0.20702664])}, 
+         1: {'accuracy_cumsum': array([0.05945946, 0.27803066, 0.27352616, 0.26902165]), 
+             'loss_cumsum': array([0.47168497, 0.15539408, 0.1780171 , 0.20904844])}, 
+         2: {'accuracy_cumsum': array([0.05945946, 0.27744868, 0.27294418, 0.26843967]), 
+             'loss_cumsum': array([0.47168497, 0.15688913, 0.17951217, 0.21054354])}
+            }
+    '''
+    # Get the cumulative sum of accuracy for each party for the current epoch
+    accuracy_cumsum_party = []
+    for x in range(3):
+        accuracy_cumsum_party.append(cumsum_results[x]['accuracy_cumsum'].tolist())    
+        #accuracy_cumsum_party.append(cumsum_results[x]['accuracy_cumsum'][epoch])
+        #wrong because last values is epoch + 1
+    logging.info('Accuracy cumsum party: {}'.format(accuracy_cumsum_party))
+
+
+
+    #Get Session Info from Redis
+    #parties = (r.execute_command('JSON.GET', session_id, '.session_1.parties')).decode('utf-8')
+    parties = (r.execute_command('JSON.GET', session_id, '.{}.parties'.format(session_id)))
+    print('Parties: ', parties)
+    parties = json.loads(parties)
     
+    for j in range(3):
+        #index = next((k for k, party in enumerate(parties) if party['id'] == j), None)
+        index = next((k for k, party in enumerate(parties) if party['id'] == myUserMap[j]), None)
+        if index is not None:
+            #r.execute_command('JSON.ARRAPPEND', session_id, '.{}.parties[{}].shapley_values'.format(session_id, index), accuracy_cumsum_party[j])
+            r.execute_command('JSON.SET', session_id, '.{}.parties[{}].shapley_values'.format(session_id, index), json.dumps(accuracy_cumsum_party[j]))
+
+def initiateShapleyDb(session_id, r=r):
+    #Create Shapley value key in Redis
+    try:
+        data = {
+            session_id: {
+                "parties": [
+                        {"id": myUserMap[0], "shapley_values": []},
+                        {"id": myUserMap[1], "shapley_values": []},
+                        {"id": myUserMap[2], "shapley_values": []}
+                ]
+            }}
+        r.execute_command('JSON.SET', session_id, '.', json.dumps(data))
+    except Exception as e:
+        logging.error('Error in initiating Shapley DB: {}'.format(e))
+        raise
+
 from prettytable import PrettyTable
 def count_parameters(model):
     table = PrettyTable(["Modules", "Parameters"])
@@ -404,7 +491,12 @@ def start():
     logging.info('Image shape: {} '.format(image.shape))
     logging.info('Label: {}'.format(label))
     logging.info('Name: {}'.format(image_name))
-
+    try:
+        initiateShapleyDb(session_id, r=r)
+    except Exception as e:
+        logging.error('Error in initiating Shapley DB: {}'.format(e))
+        sys.exit(1)
+        
     shapley_value_all_rounds, shapley_value_sum = getInitialShapleyValue(dataset, init_global_model, client_model_1, client_model_2, client_model_3)
   
 
