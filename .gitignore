@@ -2,6 +2,7 @@ myenv
 exp/*
 __pycache__
 shapleyserver/datasets/*
+!/shapleyserver/datasets/dataloader_cell.py
 shapleyserver/local_training/*
 mylog.log
 /logs/*
