@@ -478,7 +478,7 @@ def start():
     count_parameters(model)
     #print(model)
     #print_trainable_parameters(model)
-    model = nn.DataParallel(model,device_ids = [0,1])
+    #model = nn.DataParallel(model,device_ids = [0,1])
      
     init_global_model =model.to(device)
     client_model_1= model.to(device)
