@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  shapleyapp:
+    build: .
+    image: shapleyapp
+    shm_size: 2gb
+    volumes:
+      - ./logs:/app/logs
+      - /home/renuga_k/juniarto/dataset/local1b:/app/local1
+      - /home/renuga_k/juniarto/dataset/local2b:/app/local2
+      - /home/renuga_k/juniarto/dataset/local3b:/app/local3
+      - /home/renuga_k/juniarto/dataset/global1b:/app/global
+      - /home/renuga_k/juniarto/dataset/test:/app/valdataset
+    environment:
+      - LOCAL_MODEL_PATH1=/app/local1
+      - LOCAL_MODEL_PATH2=/app/local2
+      - LOCAL_MODEL_PATH3=/app/local3
+      - GLOBAL_MODEL_PATH=/app/global
+      - VALIDATION_DATASET=/app/valdataset
+      - SESSION_ID=4
+      - PARTY_ID0=1000
+      - PARTY_ID1=1001
+      - PARTY_ID2=1002
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - TZ=Asia/Singapore
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+    networks:
+      - redis_shapley-network
+#Remember to bring up redis container first
+networks:
+  redis_shapley-network:
+    external: true
