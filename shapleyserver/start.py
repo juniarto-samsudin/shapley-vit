@@ -193,13 +193,14 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
 
         if len(client_model_list1) == 0 or len(client_model_list2) == 0 or len(client_model_list3) == 0 or len(global_model_list) == 0:
             logging.info('No more model to process!')
-            time.sleep(10)
+            time.sleep(60)
             continueCount += 1
-            if continueCount <= 2:
+            if continueCount <= 3:
                 continue
             else:
                 break
 
+        continueCount = 0        
         local_acc_all, local_loss_all = [], []
         client_model_all_rounds = [None for i in range(num_clients)] # [None, None, None]
         client_model_selection_matrix = [False for i in range(num_clients)] # [False, False, False]
