@@ -298,6 +298,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
                 client_processed_model1.append(model1)
                 client_processed_model2.append(model2)
                 client_processed_model3.append(model3)
+                global_processed_model.append(global_avg_model)
         
 
 
