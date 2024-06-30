@@ -181,6 +181,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
     server = ServerBase(args, init_global_model, clients_all,None, valid_loader, None)
     break_all = False
     continueCount = 0
+    globalEpochCounter = 0
     #while len(client_processed_model1) <= 1 and len(client_processed_model2) <= 1 and len(client_processed_model3) <= 1: #process 1 model only for each client
     while True:
         client_model_list1 = [f for f in os.listdir(my_local_model_path1) if os.path.isfile(os.path.join(my_local_model_path1, f)) and f not in client_processed_model1]
@@ -193,9 +194,9 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
 
         if len(client_model_list1) == 0 or len(client_model_list2) == 0 or len(client_model_list3) == 0 or len(global_model_list) == 0:
             logging.info('No more model to process!')
-            time.sleep(60)
+            time.sleep(180)
             continueCount += 1
-            if continueCount <= 3:
+            if continueCount <= 5:
                 continue
             else:
                 break
@@ -211,7 +212,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
         for (j, (model1, model2, model3, global_avg_model)) in enumerate(zip (sorted(client_model_list1, key=natural_keys), sorted(client_model_list2, key=natural_keys), sorted(client_model_list3, key=natural_keys),sorted(global_model_list, key=natural_keys))):
             logging.info("**********************************************************************************")
             logging.info("NEW EPOCH")
-            logging.info("EPOCH NO: {}".format(j))
+            logging.info("EPOCH NO: {}".format(j+globalEpochCounter))
            
             filePath_1 = os.path.join(my_local_model_path1, model1)
             filePath_2 = os.path.join(my_local_model_path2, model2)
@@ -291,7 +292,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
                     shapley_value_sum[i] = {k: shapley_value_sum[i][k] + shapley_value[i][k] for k in shapley_value_sum[i].keys()}
                 logging.info('Shapley value all rounds: {}'.format(shapley_value_all_rounds))
                 logging.info('Shapley value sum: {}'.format(shapley_value_sum))
-                updateShapleyDb(shapley_value_all_rounds, session_id, j)
+                updateShapleyDb(shapley_value_all_rounds, session_id, j+globalEpochCounter)
                 shapley_session_all.append(shapley_value)
                 logging.info('Shapley session all: {}'.format(shapley_session_all))
                 client_processed_model1.append(model1)
@@ -324,6 +325,8 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
                 break  
             """
         #if break_all:
+        j = j + 1
+        globalEpochCounter = globalEpochCounter + j
         for key in utility_map:
             shapley_df = pd.DataFrame(shapley_value_all_rounds[key])
             shapley_df['shapley_value_sum'] = shapley_df[list(shapley_value_all_rounds[key][0].keys())].sum(axis=1)
