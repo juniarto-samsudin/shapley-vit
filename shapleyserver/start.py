@@ -261,7 +261,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
                 logging.info('Acc session all: {}'.format(acc_session_all))
                 logging.info('Loss session all: {}'.format(loss_session_all))
                 logging.info("=====================================================================================================")
-
+                updateAccuracyDb(acc_session_all, session_id, j+globalEpochCounter)
                 """ 
                 # create clients
                 clients_all = [ClientBase(id, args, init_global_model, dataset)
@@ -405,8 +405,36 @@ def updateShapleyDb(data, session_id, epoch, r=r):
             #r.execute_command('JSON.ARRAPPEND', session_id, '.{}.parties[{}].shapley_values'.format(session_id, index), accuracy_cumsum_party[j])
             r.execute_command('JSON.SET', session_id, '.{}.parties[{}].shapley_values'.format(session_id, index), json.dumps(accuracy_cumsum_party[j]))
 
+def updateAccuracyDb(data, session_id, epoch, r=r):
+    logging.info('UpdateAccuracyDb')
+    session_id_acc = session_id + '_acc'
+    
+    parties = (r.execute_command('JSON.GET', session_id_acc, '.{}.parties'.format(session_id_acc)))
+    logging.info('Parties: {}'.format(parties))
+    parties = json.loads(parties)
+
+    '''
+    data = [
+            [0.2799586776859504, 0.265495867768595, 0.2830578512396694], 
+            [0.2840909090909091, 0.30268595041322316, 0.3202479338842975]
+           ]
+    '''
+    # Empty the 'acc' array for each party
+    for i in range(len(parties)):
+        r.execute_command('JSON.SET', session_id_acc, '.{}.parties[{}].acc'.format(session_id_acc, i), json.dumps([]))
+
+    for epochAcc in data:
+        for j in range(3):
+            #index = next((k for k, party in enumerate(parties) if party['id'] == j), None)
+            index = next((k for k, party in enumerate(parties) if party['id'] == myUserMap[j]), None)
+            if index is not None:
+                r.execute_command('JSON.ARRAPPEND', session_id_acc, '.{}.parties[{}].acc'.format(session_id_acc, index), epochAcc[j])
+                #r.execute_command('JSON.SET', session_id, '.{}.parties[{}].shapley_values'.format(session_id, index), json.dumps(accuracy_cumsum_party[j]))
+
+
 def initiateShapleyDb(session_id, r=r):
     #Create Shapley value key in Redis
+    session_id_acc = session_id + '_acc'
     try:
         data = {
             session_id: {
@@ -416,7 +444,16 @@ def initiateShapleyDb(session_id, r=r):
                         {"id": myUserMap[2], "shapley_values": []}
                 ]
             }}
+        data_acc = {
+            session_id_acc: {
+                "parties": [
+                        {"id": myUserMap[0], "acc": []},
+                        {"id": myUserMap[1], "acc": []},
+                        {"id": myUserMap[2], "acc": []}
+                ]
+            }}
         r.execute_command('JSON.SET', session_id, '.', json.dumps(data))
+        r.execute_command('JSON.SET', session_id_acc, '.', json.dumps(data_acc))
     except Exception as e:
         logging.error('Error in initiating Shapley DB: {}'.format(e))
         raise

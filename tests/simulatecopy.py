@@ -28,10 +28,10 @@ destinationFolders = [
             ]
 
 sourceFolders = [
-    '/home/renuga_k/juniarto/evyd-shapley-api-server/uploads/667e73e1a177650847d637ef/667e73e3a177650847d637f0',
-    '/home/renuga_k/juniarto/evyd-shapley-api-server/uploads/667e73e1a177650847d637ef/667e73fba177650847d637f1',
-    '/home/renuga_k/juniarto/evyd-shapley-api-server/uploads/667e73e1a177650847d637ef/667e740ea177650847d637f2',
-    '/home/renuga_k/juniarto/evyd-shapley-api-server/uploads/667e73e1a177650847d637ef/global'
+    '/home/renuga_k/juniarto/evyd-shapley-api-server/uploads/668248f1f9e2e92da04c4f16/668248f3f9e2e92da04c4f17',
+    '/home/renuga_k/juniarto/evyd-shapley-api-server/uploads/668248f1f9e2e92da04c4f16/66824920f9e2e92da04c4f18',
+    '/home/renuga_k/juniarto/evyd-shapley-api-server/uploads/668248f1f9e2e92da04c4f16/66824935f9e2e92da04c4f19',
+    '/home/renuga_k/juniarto/evyd-shapley-api-server/uploads/668248f1f9e2e92da04c4f16/global'
 ]
 
 def batch2():
