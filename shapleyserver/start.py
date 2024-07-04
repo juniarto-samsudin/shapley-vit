@@ -181,7 +181,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
     shapley_session_all = []
 
     # create clients
-    clients_all = [ClientBase(id, args, init_global_model, dataset, my_number_of_images)
+    clients_all = [ClientBase(id, args, init_global_model, dataset, myNoiMap[id])
                             for id in range(num_clients)] 
 
     # create the server
