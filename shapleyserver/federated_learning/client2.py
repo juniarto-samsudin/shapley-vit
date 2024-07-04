@@ -12,7 +12,14 @@ class ClientBase(object):
         #self.model_train = copy.deepcopy(net_train).to(self.device) 
                 
         self.local_data_train = train_set
-        self.num_local_data_train = len(self.local_data_train)
+        #self.num_local_data_train = len(self.local_data_train)
+        if id==0:
+            self.num_local_data_train = 888
+        elif id ==1:
+            self.num_local_data_train = 1745
+        elif id ==2:
+            self.num_local_data_train = 4119
+        
         #self.batch_train = args.client_batch_train
         #self.local_trainloader = DataLoader(self.local_data_train, batch_size=self.batch_train, shuffle=False)
         

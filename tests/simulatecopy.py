@@ -2,6 +2,7 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 import os
 import argparse
+import glob
 
 def copy_file(file, dest_folder):
     shutil.copy(file, dest_folder)
@@ -83,6 +84,11 @@ def mass_copy():
                     myGlobalFile = os.path.join(mySource, myGlobal)
                     executor.submit(copy_file, myGlobalFile, myDestination)
                 else:
+                    '''
+                    # Use glob.glob to handle patterns
+                    for myLocalFile in glob.glob(os.path.join(mySource, myLocal)):
+                        executor.submit(copy_file, myLocalFile, myDestination)
+                    '''
                     myLocalFile = os.path.join(mySource, myLocal)
                     #f0/local5
                     #f1/local5

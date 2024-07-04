@@ -3,22 +3,22 @@ version: '3.8'
 services:
   redis:
     image: redislabs/rejson:latest
-    container_name: shapley-redisjson
+    container_name: shapley-redisjson-21
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
-      - rejson_data:/data
+      - rejson_data_21:/data
     networks:
-      - shapley-network
+      - shapley-network-21
 
 volumes:
-  rejson_data:
+  rejson_data_21:
 
 networks:
-  shapley-network:
+  shapley-network-21:
     driver: bridge
     ipam:
       config:
-        - subnet: 192.168.20.0/24
-          gateway: 192.168.20.1
+        - subnet: 192.168.21.0/24
+          gateway: 192.168.21.1
 
