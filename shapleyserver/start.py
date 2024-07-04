@@ -31,10 +31,17 @@ session_id = os.getenv("SESSION_ID")
 party_id0 = os.getenv("PARTY_ID0")
 party_id1 = os.getenv("PARTY_ID1")
 party_id2 = os.getenv("PARTY_ID2")
+noi_id0 = os.getenv("NUMBER_OF_IMAGES_ID0")
+noi_id1 = os.getenv("NUMBER_OF_IMAGES_ID1")
+noi_id2 = os.getenv("NUMBER_OF_IMAGES_ID2")
 myUserMap = {0: party_id0, 
              1: party_id1, 
              2: party_id2
             }
+myNoiMap = {0: noi_id0,
+            1: noi_id1,
+            2: noi_id2
+         }
 log_name = 'container-{}.log'.format(session_id)
 logging.basicConfig(filename=("./logs/container-logs/{}".format(log_name)), 
                     level=logging.DEBUG, 
@@ -174,7 +181,7 @@ def getInitialShapleyValue(dataset, init_global_model, client_model_1, client_mo
     shapley_session_all = []
 
     # create clients
-    clients_all = [ClientBase(id, args, init_global_model, dataset)
+    clients_all = [ClientBase(id, args, init_global_model, dataset, my_number_of_images)
                             for id in range(num_clients)] 
 
     # create the server

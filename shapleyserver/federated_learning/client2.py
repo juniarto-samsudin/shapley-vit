@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 class ClientBase(object):
-    def __init__(self, id, args, net_train, train_set, test_set=None):
+    def __init__(self, id, args, net_train, train_set, number_of_images, test_set=None):
         self.id = id
         self.args = args
         #self.device = self.args.device
@@ -13,12 +13,7 @@ class ClientBase(object):
                 
         self.local_data_train = train_set
         #self.num_local_data_train = len(self.local_data_train)
-        if id==0:
-            self.num_local_data_train = 888
-        elif id ==1:
-            self.num_local_data_train = 1745
-        elif id ==2:
-            self.num_local_data_train = 4119
+        self.num_local_data_train = number_of_images
         
         #self.batch_train = args.client_batch_train
         #self.local_trainloader = DataLoader(self.local_data_train, batch_size=self.batch_train, shuffle=False)
