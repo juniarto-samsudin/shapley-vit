@@ -38,15 +38,17 @@ myUserMap = {0: party_id0,
              1: party_id1, 
              2: party_id2
             }
-myNoiMap = {0: noi_id0,
-            1: noi_id1,
-            2: noi_id2
+myNoiMap = {0: int(noi_id0),
+            1: int(noi_id1),
+            2: int(noi_id2)
          }
 log_name = 'container-{}.log'.format(session_id)
 logging.basicConfig(filename=("./logs/container-logs/{}".format(log_name)), 
                     level=logging.DEBUG, 
                     format='%(asctime)s %(levelname)s %(message)s', 
                     datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.info('myUserMap: {}'.format(myUserMap))
+logging.info('myNoiMap: {}'.format(myNoiMap))
 
 #Get Redis Host from environment variable in docker-compose
 #If not found, use localhost for development
